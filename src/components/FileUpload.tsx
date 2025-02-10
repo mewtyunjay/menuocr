@@ -16,6 +16,7 @@ export default function FileUpload({ onFileUpload, isUploading }: FileUploadProp
       if (acceptedFiles.length > 0) {
         await onFileUpload(acceptedFiles[0]);
       }
+      setDragActive(false);
     },
     [onFileUpload]
   );
@@ -26,6 +27,8 @@ export default function FileUpload({ onFileUpload, isUploading }: FileUploadProp
       'image/*': ['.jpeg', '.jpg', '.png', '.webp'],
     },
     multiple: false,
+    onDragEnter: () => setDragActive(true),
+    onDragLeave: () => setDragActive(false),
   });
 
   return (
