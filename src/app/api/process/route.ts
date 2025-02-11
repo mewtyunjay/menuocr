@@ -1,6 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 
+// Define interfaces for type safety
+interface BaseMenuItem {
+  categoryName: string;
+  item_name: string;
+  item_foodType: "Veg" | "Non-Veg";
+  item_original_price: number;
+}
+
+interface CompleteMenuItem extends BaseMenuItem {
+  itemImage: string;
+  item_description: string;
+  item_discounted_price: number;
+  outofStock: boolean;
+  resId: string;
+}
+
 // Initialize Gemini AI
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
@@ -81,10 +97,10 @@ export async function POST(request: NextRequest) {
     ]);
 
     // Parse the base response
-    const baseResponse = JSON.parse(result.response.text());
+    const baseResponse = JSON.parse(result.response.text()) as BaseMenuItem[];
     
     // Add preset values to each item
-    const completeResponse = baseResponse.map((item: any, index: number) => ({
+    const completeResponse = baseResponse.map((item: BaseMenuItem, index: number): CompleteMenuItem => ({
       ...item,
       itemImage: "",
       item_description: "",
