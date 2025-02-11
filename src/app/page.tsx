@@ -82,6 +82,9 @@ export default function Home() {
               >
                 Copy JSON
               </button>
+              <span className="text-gray-300 text-sm">
+                ({menuItems.length} items extracted from menu)
+              </span>
               {copied && (
                 <span className="text-green-400 text-sm animate-fade-in">
                   JSON copied!

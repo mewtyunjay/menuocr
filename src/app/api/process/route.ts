@@ -4,7 +4,7 @@ import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 // Initialize Gemini AI
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
-// Define the schema for menu items
+// Define simplified schema for only the dynamic values
 const schema = {
   type: SchemaType.ARRAY,
   items: {
@@ -14,41 +14,21 @@ const schema = {
         type: SchemaType.STRING,
         description: "Category of the menu item",
       },
-      itemImage: {
+      item_name: {
         type: SchemaType.STRING,
-        description: "URL of the item image",
-      },
-      item_description: {
-        type: SchemaType.STRING,
-        description: "Description of the menu item",
+        description: "Name of the menu item",
       },
       item_foodType: {
         type: SchemaType.STRING,
         description: "Type of food (Veg/Non-Veg)",
         enum: ["Veg", "Non-Veg"],
       },
-      item_name: {
-        type: SchemaType.STRING,
-        description: "Name of the menu item",
-      },
       item_original_price: {
         type: SchemaType.NUMBER,
-        description: "Original price of the item",
-      },
-      item_discounted_price: {
-        type: SchemaType.NUMBER,
-        description: "Discounted price of the item",
-      },
-      outofStock: {
-        type: SchemaType.BOOLEAN,
-        description: "Whether the item is out of stock",
-      },
-      resId: {
-        type: SchemaType.STRING,
-        description: "Restaurant ID",
+        description: "Price of the item",
       },
     },
-    required: ["categoryName", "item_name", "item_original_price", "item_discounted_price", "item_foodType", "outofStock", "resId"],
+    required: ["categoryName", "item_name", "item_original_price", "item_foodType"],
   },
 };
 
@@ -71,7 +51,7 @@ export async function POST(request: NextRequest) {
 
     // Initialize the model with the schema
     const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-pro",
+      model: "gemini-2.0-flash",
       generationConfig: {
         responseMimeType: "application/json",
         responseSchema: schema,
@@ -81,15 +61,12 @@ export async function POST(request: NextRequest) {
     // Create the prompt for menu parsing
     const prompt = `
       Analyze this menu image and extract menu items.
-      For each item, provide:
+      For each item, provide only:
       - categoryName (e.g., "Indian", "Chinese", "Italian" etc.)
       - item_name
       - item_foodType (must be either "Veg" or "Non-Veg")
       - item_original_price (as a number)
-      - item_discounted_price
-      - outofStock (randomly set as set true for now)
-      - resId (generate a random string with "res" prefix)
-      Leave itemImage, item_description and item_discounted_price as empty strings. For items with multiple variants, create a new item for each variant.
+      For items with multiple variants, create a new item for each variant.
     `;
 
     // Generate content with the image
@@ -103,8 +80,20 @@ export async function POST(request: NextRequest) {
       }
     ]);
 
-    const response = JSON.parse(result.response.text());
-    return NextResponse.json(response);
+    // Parse the base response
+    const baseResponse = JSON.parse(result.response.text());
+    
+    // Add preset values to each item
+    const completeResponse = baseResponse.map((item: any, index: number) => ({
+      ...item,
+      itemImage: "",
+      item_description: "",
+      item_discounted_price: item.item_original_price,
+      outofStock: false,
+      resId: `res${String(index + 100).padStart(3, '0')}`,
+    }));
+
+    return NextResponse.json(completeResponse);
   } catch (error) {
     console.error('Error processing file:', error);
     return NextResponse.json(
